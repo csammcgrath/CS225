@@ -1,0 +1,287 @@
+SQL> -- Perform Steps 2 - 7 of lab3 in this region
+SQL> --#2
+SQL> SELECT c.name AS "Client", COUNT(*) AS "Haul Count"
+FROM haul h
+JOIN client c
+  ON h.client_id = c.client_id
+GROUP BY c.name
+ORDER BY c.name ASC;
+
+Client                                        Haul Count
+--------------------------------------------- ----------
+Idaho Potatoes Inc                                    15
+Oregon Lumber Inc                                     20
+Washington Apples Inc                                 15
+
+ 3 rows selected 
+
+SQL> --#3
+SQL> SELECT e.first_name || ' ' || e.last_name AS "Driver",
+       v.name AS "Truck",
+       COUNT(*) AS "Haul Count"
+FROM haul h
+JOIN employee e 
+  ON e.employee_id = h.employee_id
+JOIN vehicle v
+  ON v.vehicle_id = h.vehicle_id
+GROUP BY e.first_name || ' ' || e.last_name, v.name
+ORDER BY "Driver", "Haul Count" ASC;
+
+Driver                                                                                      Truck                                         Haul Count
+------------------------------------------------------------------------------------------- --------------------------------------------- ----------
+Judy Shaw                                                                                   Mad Max                                                4
+Judy Shaw                                                                                   Classy Cat                                             5
+Judy Shaw                                                                                   Big Dog                                                5
+Matt Maloney                                                                                Big Dog                                                5
+Matt Maloney                                                                                Mad Max                                                8
+Matt Maloney                                                                                Classy Cat                                             8
+Troy Taylor                                                                                 Classy Cat                                             3
+Troy Taylor                                                                                 Big Dog                                                4
+Troy Taylor                                                                                 Mad Max                                                8
+
+ 9 rows selected 
+
+SQL> --#4
+SQL> SELECT e.first_name || ' ' || e.last_name AS "Driver",
+       SUM(CASE 
+              WHEN v.name = 'Big Dog' 
+                THEN 1 
+                ELSE 0
+           END) AS "Big Dog",
+       SUM(CASE 
+              WHEN v.name = 'Classy Cat' 
+                THEN 1 
+                ELSE 0 
+           END) AS "Classy Cat",
+       SUM(CASE 
+              WHEN v.name = 'Mad Max' 
+              THEN 1 
+              ELSE 0 
+           END) AS "Mad Max"
+FROM haul h
+JOIN employee e 
+  ON e.employee_id = h.employee_id
+JOIN vehicle v
+  ON v.vehicle_id = h.vehicle_id
+GROUP BY first_name || ' ' || last_name
+ORDER BY "Driver" ASC;
+
+Driver                                                                                         Big Dog Classy Cat    Mad Max
+------------------------------------------------------------------------------------------- ---------- ---------- ----------
+Judy Shaw                                                                                            5          5          4
+Matt Maloney                                                                                         5          8          8
+Troy Taylor                                                                                          4          3          8
+
+ 3 rows selected 
+
+SQL> --#5
+SQL> --#5a
+SQL> INSERT INTO mileage
+SELECT mileage_s1.nextval,
+       city2_id,
+       city1_id,
+       miles
+FROM mileage;
+
+6 rows inserted.
+
+SQL> --#5b
+SQL> SELECT e.first_name || ' ' || e.last_name AS "Driver",
+       SUM(m.miles) AS "Total Mileage"
+FROM haul h
+JOIN employee e
+  ON e.employee_id = h.employee_id
+JOIN mileage m
+  ON m.city1_id = h.begin_city_id AND
+     m.city2_id = h.end_city_id
+GROUP BY e.first_name || ' ' || e.last_name;
+
+Driver                                                                                                                Total Mileage
+------------------------------------------------------------------------------------------- ---------------------------------------
+Troy Taylor                                                                                                                   10491
+Matt Maloney                                                                                                                  14196
+Judy Shaw                                                                                                                     10471
+
+ 3 rows selected 
+
+SQL> --$6
+SQL> SELECT e.first_name || ' ' || e.last_name AS "Driver",
+       TO_CHAR(SUM(CASE
+                   WHEN begin_date BETWEEN '01-Nov-16' AND '01-Dec-16'
+                   THEN m.miles
+                   ELSE 0
+               END), '9,999,999') AS "Nov",
+       TO_CHAR(SUM(CASE
+                   WHEN begin_date BETWEEN '01-Dec-16' AND '01-Jan-17'
+                   THEN m.miles
+                   ELSE 0
+               END), '9,999,999') AS "Dec",
+       TO_CHAR(SUM(CASE
+                   WHEN begin_date BETWEEN '01-Jan-17' AND '01-Feb-17'
+                   THEN m.miles
+                   ELSE 0
+               END), '9,999,999') AS "Jan",
+       TO_CHAR(SUM(CASE
+                   WHEN begin_date BETWEEN '01-Feb-17' AND '01-Mar-17'
+                   THEN m.miles
+                   ELSE 0
+               END), '9,999,999') AS "Feb",
+       TO_CHAR(SUM(m.miles), '9,999,999') AS "Total Miles"
+FROM haul h
+JOIN employee e 
+  ON e.employee_id = h.employee_id
+JOIN mileage m
+  ON m.city1_id = h.begin_city_id AND
+     m.city2_id = h.end_city_id
+JOIN vehicle v
+  ON h.vehicle_id = v.vehicle_id
+GROUP BY e.first_name || ' ' || e.last_name
+ORDER BY "Driver" DESC;
+
+Driver                                                                                      Nov        Dec        Jan        Feb        Total Mile
+------------------------------------------------------------------------------------------- ---------- ---------- ---------- ---------- ----------
+Troy Taylor                                                                                      3,200      1,242      5,249        800     10,491
+Matt Maloney                                                                                     3,574      5,623      3,694      1,305     14,196
+Judy Shaw                                                                                        2,547      3,964      3,117        843     10,471
+
+ 3 rows selected 
+
+SQL> --#7
+SQL> SELECT e.first_name || ' ' || e.last_name AS "Driver",
+       TO_CHAR(SUM(CASE 
+                  WHEN begin_date BETWEEN '01-Nov-16' AND '01-Dec-16'
+                  THEN m.miles
+                  ELSE 0
+               END), '9,999,999') AS "Nov",
+       TO_CHAR(SUM(CASE
+                  WHEN extract(month from h.begin_date) = 11
+                  THEN r.rate * m.miles
+                  ELSE 0
+               END), '$9,999,999.99') AS "Nov Gross Rev",
+       TO_CHAR(SUM(CASE 
+              WHEN begin_date BETWEEN '01-Dec-16' AND '01-Jan-17'
+              THEN m.miles
+              ELSE 0
+           END), '9,999,999') AS "Dec",
+           TO_CHAR(SUM(CASE
+                  WHEN extract(month from h.begin_date) = 12
+                  THEN r.rate * m.miles
+                  ELSE 0
+               END), '$9,999,999.99') AS "Dec Gross Rev",
+       TO_CHAR(SUM(CASE 
+              WHEN begin_date BETWEEN '01-Jan-17' AND '01-Feb-17'
+              THEN m.miles
+              ELSE 0
+           END), '9,999,999') AS "Jan",
+       TO_CHAR(SUM(CASE
+                  WHEN extract(month from h.begin_date) = 1
+                  THEN r.rate * m.miles
+                  ELSE 0
+               END), '$9,999,999.99') AS "Jan Gross Rev",
+       TO_CHAR(SUM(CASE 
+              WHEN begin_date BETWEEN '01-Feb-17' AND '01-Mar-17'
+              THEN m.miles
+              ELSE 0
+           END), '9,999,999,999') AS "Feb",
+       TO_CHAR(SUM(CASE
+                  WHEN extract(month from h.begin_date) = 2
+                  THEN r.rate * m.miles
+                  ELSE 0
+               END), '$9,999,999.99') AS "Feb Gross Rev",
+       TO_CHAR(SUM(m.miles), '9,999,999') AS "Total Mileage",
+       TO_CHAR(SUM(r.rate * m.miles), '$9,999,999.99') AS "Total Gross Rev"
+FROM haul h
+JOIN employee e
+  ON e.employee_id = h.employee_id
+JOIN mileage m
+  ON m.city1_id = h.begin_city_id AND
+     m.city2_id = h.end_city_id
+JOIN vehicle v
+  ON h.vehicle_id = v.vehicle_id
+JOIN season s
+  ON s.month = extract(month from h.begin_date)
+JOIN rate r
+  ON r.season = s.season AND
+     r.vehicle_type = v.type
+GROUP BY e.first_name || ' ' || e.last_name;
+
+Driver                                                                                      Nov        Nov Gross Rev  Dec        Dec Gross Rev  Jan        Jan Gross Rev  Feb            Feb Gross Rev  Total Mile Total Gross Re
+------------------------------------------------------------------------------------------- ---------- -------------- ---------- -------------- ---------- -------------- -------------- -------------- ---------- --------------
+Matt Maloney                                                                                     3,574     $31,467.00      5,623     $26,570.50      3,694     $17,965.00          1,305      $6,525.00     14,196     $82,527.50
+Troy Taylor                                                                                      3,200     $28,612.00      1,242      $5,705.00      5,249     $25,866.50            800      $4,400.00     10,491     $64,583.50
+Judy Shaw                                                                                        2,547     $22,333.50      3,964     $18,283.00      3,117     $15,985.00            843      $4,215.00     10,471     $60,816.50
+
+ 3 rows selected 
+
+SQL> SELECT *
+FROM haul h
+JOIN employee e
+  ON e.employee_id = h.employee_id
+JOIN mileage m
+  ON m.city1_id = h.begin_city_id AND
+     m.city2_id = h.end_city_id
+JOIN vehicle v
+  ON h.vehicle_id = v.vehicle_id
+JOIN season s
+  ON s.month = extract(month from h.begin_date)
+JOIN rate r
+  ON r.season = s.season AND
+     r.vehicle_type = v.type;
+
+   HAUL_ID                             EMPLOYEE_ID                           BEGIN_CITY_ID                             END_CITY_ID  CLIENT_ID BEGIN_DATE END_DATE  VEHICLE_ID                             EMPLOYEE_ID FIRST_NAME                                    LAST_NAME                                     TITLE                                         HIRE_DATE TERMINATION_DATE EMAIL                                         PHONE        MILEAGE_ID   CITY1_ID   CITY2_ID      MILES VEHICLE_ID VIN               TYPE                                            CAPACITY PURCHASE_PR NAME                                           SEASON_ID SEASON                         MONTH    RATE_ID SEASON                                        VEHICLE_TYPE                                        RATE
+---------- --------------------------------------- --------------------------------------- --------------------------------------- ---------- ---------- --------- ---------- --------------------------------------- --------------------------------------------- --------------------------------------------- --------------------------------------------- --------- ---------------- --------------------------------------------- ------------ ---------- ---------- ---------- ---------- ---------- ----------------- --------------------------------------------- ---------- ----------- --------------------------------------------- ---------- ------------------------- ---------- ---------- --------------------------------------------- --------------------------------------------- ----------
+      1001                                    1004                                    1001                                    1002       1002 03-NOV-16  04-NOV-16       1002                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1001       1001       1002        505       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1011 High                              11       1002 High                                          Refrig                                               9.5
+      1002                                    1003                                    1002                                    1001       1001 12-NOV-16  13-NOV-16       1002                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1007       1002       1001        505       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1011 High                              11       1002 High                                          Refrig                                               9.5
+      1003                                    1005                                    1001                                    1003       1003 17-DEC-16  17-DEC-16       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1002       1001       1003        340       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1004                                    1005                                    1002                                    1003       1001 28-DEC-16  29-DEC-16       1002                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1009       1002       1003        843       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1012 Low                               12       1005 Low                                           Refrig                                               5.5
+      1005                                    1004                                    1001                                    1003       1002 29-NOV-16  30-NOV-16       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1002       1001       1003        340       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1011 High                              11       1001 High                                          Box                                                    9
+      1006                                    1003                                    1003                                    1004       1003 11-DEC-16  13-DEC-16       1003                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1005       1003       1004        737       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1007                                    1003                                    1001                                    1002       1003 22-NOV-16  23-NOV-16       1003                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1001       1001       1002        505       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1011 High                              11       1003 High                                          Flat                                                   8
+      1008                                    1003                                    1004                                    1003       1001 23-NOV-16  25-NOV-16       1003                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1011       1004       1003        737       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1011 High                              11       1003 High                                          Flat                                                   8
+      1009                                    1003                                    1002                                    1004       1003 05-DEC-16  07-DEC-16       1003                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1006       1002       1004        809       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1010                                    1003                                    1002                                    1004       1003 28-DEC-16  31-DEC-16       1002                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1006       1002       1004        809       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1012 Low                               12       1005 Low                                           Refrig                                               5.5
+      1011                                    1003                                    1001                                    1004       1002 10-JAN-17  13-JAN-17       1002                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1004       1001       1004        800       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1001 Low                                1       1005 Low                                           Refrig                                               5.5
+      1012                                    1003                                    1004                                    1002       1002 28-DEC-16  30-DEC-16       1002                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1012       1004       1002        809       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1012 Low                               12       1005 Low                                           Refrig                                               5.5
+      1013                                    1003                                    1001                                    1004       1002 17-NOV-16  20-NOV-16       1002                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1004       1001       1004        800       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1011 High                              11       1002 High                                          Refrig                                               9.5
+      1014                                    1003                                    1003                                    1002       1003 19-JAN-17  20-JAN-17       1001                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1003       1003       1002        843       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1015                                    1003                                    1003                                    1002       1002 15-FEB-17  16-FEB-17       1001                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1003       1003       1002        843       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1002 Low                                2       1004 Low                                           Box                                                    5
+      1016                                    1003                                    1003                                    1004       1003 25-JAN-17  28-JAN-17       1001                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1005       1003       1004        737       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1017                                    1004                                    1002                                    1004       1002 26-NOV-16  28-NOV-16       1003                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1006       1002       1004        809       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1011 High                              11       1003 High                                          Flat                                                   8
+      1018                                    1004                                    1004                                    1001       1002 07-JAN-17  10-JAN-17       1003                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1010       1004       1001        800       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1001 Low                                1       1006 Low                                           Flat                                                   4
+      1019                                    1004                                    1002                                    1001       1002 12-DEC-16  14-DEC-16       1003                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1007       1002       1001        505       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1020                                    1004                                    1003                                    1002       1001 27-JAN-17  29-JAN-17       1002                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1003       1003       1002        843       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1001 Low                                1       1005 Low                                           Refrig                                               5.5
+      1021                                    1004                                    1004                                    1001       1003 14-FEB-17  17-FEB-17       1002                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1010       1004       1001        800       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1002 Low                                2       1005 Low                                           Refrig                                               5.5
+      1022                                    1004                                    1003                                    1004       1002 20-NOV-16  22-NOV-16       1002                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1005       1003       1004        737       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1011 High                              11       1002 High                                          Refrig                                               9.5
+      1023                                    1004                                    1004                                    1003       1001 14-JAN-17  16-JAN-17       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1011       1004       1003        737       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1024                                    1004                                    1002                                    1003       1002 12-JAN-17  14-JAN-17       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1009       1002       1003        843       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1025                                    1004                                    1002                                    1004       1001 16-NOV-16  17-NOV-16       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1006       1002       1004        809       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1011 High                              11       1001 High                                          Box                                                    9
+      1026                                    1004                                    1003                                    1002       1001 13-JAN-17  15-JAN-17       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1003       1003       1002        843       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1027                                    1004                                    1003                                    1001       1003 29-JAN-17  30-JAN-17       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1008       1003       1001        340       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1028                                    1004                                    1003                                    1004       1001 11-DEC-16  12-DEC-16       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1005       1003       1004        737       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1012 Low                               12       1004 Low                                           Box                                                    5
+      1029                                    1005                                    1002                                    1004       1003 27-DEC-16  30-DEC-16       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1006       1002       1004        809       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1030                                    1005                                    1004                                    1003       1003 27-DEC-16  29-DEC-16       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1011       1004       1003        737       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1031                                    1005                                    1004                                    1003       1002 08-DEC-16  10-DEC-16       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1011       1004       1003        737       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1032                                    1005                                    1002                                    1004       1001 24-NOV-16  26-NOV-16       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1006       1002       1004        809       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1011 High                              11       1003 High                                          Flat                                                   8
+      1033                                    1005                                    1002                                    1001       1002 08-JAN-17  10-JAN-17       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1007       1002       1001        505       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1001 Low                                1       1006 Low                                           Flat                                                   4
+      1034                                    1005                                    1002                                    1004       1001 27-DEC-16  28-DEC-16       1002                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1006       1002       1004        809       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1012 Low                               12       1005 Low                                           Refrig                                               5.5
+      1035                                    1005                                    1002                                    1003       1001 29-NOV-16  02-DEC-16       1002                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1009       1002       1003        843       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1011 High                              11       1002 High                                          Refrig                                               9.5
+      1036                                    1005                                    1003                                    1004       1003 30-NOV-16  03-DEC-16       1002                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1005       1003       1004        737       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1011 High                              11       1002 High                                          Refrig                                               9.5
+      1037                                    1005                                    1001                                    1002       1001 26-DEC-16  29-DEC-16       1002                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1001       1001       1002        505       1002 222222222abcdefgh Refrig                                             42000      130000 Big Dog                                             1012 Low                               12       1005 Low                                           Refrig                                               5.5
+      1038                                    1005                                    1003                                    1004       1003 20-JAN-17  23-JAN-17       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1005       1003       1004        737       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1039                                    1005                                    1002                                    1001       1003 12-FEB-17  15-FEB-17       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1007       1002       1001        505       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1002 Low                                2       1004 Low                                           Box                                                    5
+      1040                                    1005                                    1004                                    1001       1003 13-FEB-17  14-FEB-17       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1010       1004       1001        800       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1002 Low                                2       1004 Low                                           Box                                                    5
+      1041                                    1005                                    1004                                    1002       1002 05-JAN-17  06-JAN-17       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1012       1004       1002        809       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1042                                    1005                                    1002                                    1003       1003 20-DEC-16  22-DEC-16       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1009       1002       1003        843       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1012 Low                               12       1004 Low                                           Box                                                    5
+      1043                                    1005                                    1002                                    1001       1001 30-NOV-16  03-DEC-16       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1007       1002       1001        505       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1011 High                              11       1001 High                                          Box                                                    9
+      1044                                    1005                                    1003                                    1002       1001 10-JAN-17  11-JAN-17       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1003       1003       1002        843       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1045                                    1005                                    1004                                    1001       1003 11-JAN-17  13-JAN-17       1001                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1010       1004       1001        800       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1051                                    1005                                    1001                                    1003       1001 24-NOV-16  25-NOV-16       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1002       1001       1003        340       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1011 High                              11       1003 High                                          Flat                                                   8
+      1052                                    1003                                    1001                                    1004       1003 28-DEC-16  30-DEC-16       1003                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1004       1001       1004        800       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1012 Low                               12       1006 Low                                           Flat                                                   4
+      1053                                    1005                                    1001                                    1003       1003 22-NOV-16  24-NOV-16       1003                                    1005 Matt                                          Maloney                                       Driver                                        28-OCT-16 <Null>           mm@truck.com                                  208-445-5000       1002       1001       1003        340       1003 333333333abcdefgh Flat                                               56000       90000 Classy Cat                                          1011 High                              11       1003 High                                          Flat                                                   8
+      1054                                    1004                                    1003                                    1002       1003 09-JAN-17  11-JAN-17       1001                                    1004 Troy                                          Taylor                                        Driver                                        25-OCT-16 <Null>           tt@truck.com                                  208-445-4000       1003       1003       1002        843       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+      1055                                    1003                                    1004                                    1003       1002 12-JAN-17  13-JAN-17       1001                                    1003 Judy                                          Shaw                                          Driver                                        21-OCT-16 <Null>           js@truck.com                                  208-445-3000       1011       1004       1003        737       1001 987654321abcdefgh Box                                                38000      110000 Mad Max                                             1001 Low                                1       1004 Low                                           Box                                                    5
+
+ 50 rows selected 
+
+SQL> -- Close log file.
+SQL> SPOOL OFF;
